@@ -1,16 +1,15 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Screen, Card, Text, Button } from '@/components/ui';
+import { spacing } from '@/constants/theme';
 
 export default function DashboardScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Dashboard</Text>
-      <Text style={styles.subtitle}>Quick stock + owed summary</Text>
-    </View>
+    <Screen title="Dashboard" subtitle="Quick stock + owed summary">
+      <Card title="Overview" style={{ marginBottom: spacing.xl }}>
+        <Text variant="body" muted>
+          Placeholder for stock + owed summary.
+        </Text>
+      </Card>
+      <Button label="View inventory" onPress={() => {}} variant="primary" />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666' },
-});

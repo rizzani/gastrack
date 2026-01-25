@@ -1,16 +1,13 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Screen, Card, Text } from '@/components/ui';
 
 export default function HistoryScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>History</Text>
-      <Text style={styles.subtitle}>Movement timeline</Text>
-    </View>
+    <Screen title="History" subtitle="Movement timeline">
+      <Card title="Activity log">
+        <Text variant="body" muted>
+          Placeholder for sales, returns, and adjustments.
+        </Text>
+      </Card>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666' },
-});

@@ -1,16 +1,13 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Screen, Card, Text } from '@/components/ui';
 
 export default function InventoryScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Inventory</Text>
-      <Text style={styles.subtitle}>Full / Empty / Damaged by size</Text>
-    </View>
+    <Screen title="Inventory" subtitle="Full / Empty / Damaged by size">
+      <Card title="Stock by size">
+        <Text variant="body" muted>
+          Placeholder for live stock by size and state.
+        </Text>
+      </Card>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666' },
-});
