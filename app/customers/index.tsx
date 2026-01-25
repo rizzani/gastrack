@@ -1,16 +1,15 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Screen, Card, Text, Button } from '@/components/ui';
+import { spacing } from '@/constants/theme';
 
 export default function CustomersScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Customer Directory</Text>
-      <Text style={styles.subtitle}>List of buyers</Text>
-    </View>
+    <Screen title="Customer Directory" subtitle="List of buyers">
+      <Card title="Customers" style={{ marginBottom: spacing.xl }}>
+        <Text variant="body" muted>
+          Placeholder for customer list.
+        </Text>
+      </Card>
+      <Button label="Add customer" onPress={() => {}} variant="secondary" />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666' },
-});
