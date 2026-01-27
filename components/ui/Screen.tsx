@@ -1,45 +1,46 @@
-import { ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, KeyboardAvoidingView, Platform, type ScrollViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from './Text';
 import { colors, spacing } from '@/constants/theme';
 
-export interface ScreenProps {
-  title?: string;
-  subtitle?: string;
-  children?: React.ReactNode;
-  style?: ViewStyle;
-  contentContainerStyle?: ViewStyle;
-}
+type ScreenProps = ScrollViewProps & {
+  children: React.ReactNode;
+};
 
-export function Screen({ title, subtitle, children, style, contentContainerStyle }: ScreenProps) {
+export function Screen({ children, style, contentContainerStyle, ...props }: ScreenProps) {
   return (
-    <SafeAreaView style={[styles.safe, style]} edges={['bottom']}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {title ? (
-          <Text variant="headline" style={styles.title}>
-            {title}
-          </Text>
-        ) : null}
-        {subtitle ? (
-          <Text variant="body" muted style={styles.subtitle}>
-            {subtitle}
-          </Text>
-        ) : null}
-        {children}
-      </ScrollView>
+        <ScrollView
+          style={[styles.scrollView, style]}
+          contentContainerStyle={[styles.content, contentContainerStyle]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          {...props}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  content: { padding: spacing.xl, paddingBottom: spacing.xxl },
-  title: { marginBottom: spacing.sm },
-  subtitle: { marginBottom: spacing.xl },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+  },
 });

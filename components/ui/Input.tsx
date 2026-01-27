@@ -1,57 +1,69 @@
-import { View, TextInput, TextInputProps, StyleSheet, ViewStyle } from 'react-native';
-import { Text } from './Text';
-import { colors, radii, spacing } from '@/constants/theme';
+import { TextInput, Text, View, StyleSheet, type TextInputProps } from 'react-native';
+import { colors, typography, borderRadius, spacing } from '@/constants/theme';
 
-export interface InputProps extends Omit<TextInputProps, 'style'> {
+type InputProps = TextInputProps & {
   label?: string;
   error?: string;
-  containerStyle?: ViewStyle;
-  inputStyle?: TextInputProps['style'];
-}
+  helperText?: string;
+};
 
-export function Input({
-  label,
-  error,
-  containerStyle,
-  inputStyle,
-  placeholderTextColor = colors.textMuted,
-  ...props
-}: InputProps) {
+export function Input({ label, error, helperText, style, ...props }: InputProps) {
   return (
-    <View style={[styles.wrap, containerStyle]}>
-      {label ? (
-        <Text variant="body" style={styles.label}>
-          {label}
-        </Text>
-      ) : null}
+    <View style={styles.container}>
+      {label && <Text style={styles.label}>{label}</Text>}
       <TextInput
-        style={[styles.input, error ? styles.inputError : null, inputStyle]}
-        placeholderTextColor={placeholderTextColor}
+        style={[
+          styles.input, 
+          error && styles.inputError,
+          props.multiline && styles.inputMultiline,
+          style
+        ]}
+        placeholderTextColor={colors.textTertiary}
         {...props}
       />
-      {error ? (
-        <Text variant="caption" style={styles.error}>
-          {error}
+      {(error || helperText) && (
+        <Text style={[styles.helperText, error && styles.errorText]}>
+          {error || helperText}
         </Text>
-      ) : null}
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: spacing.lg },
-  label: { marginBottom: spacing.sm, color: colors.text },
-  input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    fontSize: 16,
-    color: colors.text,
-    minHeight: 48,
+  container: {
+    marginVertical: spacing.sm,
   },
-  inputError: { borderColor: colors.error },
-  error: { color: colors.error, marginTop: spacing.xs },
+  label: {
+    ...typography.smallSemibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    ...typography.body,
+    color: colors.text,
+    backgroundColor: colors.surface,
+    minHeight: 44,
+  },
+  inputMultiline: {
+    minHeight: 100,
+    paddingTop: spacing.sm + 2,
+    textAlignVertical: 'top',
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  helperText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  errorText: {
+    color: colors.error,
+  },
 });

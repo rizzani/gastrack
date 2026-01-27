@@ -1,46 +1,58 @@
-import { View, Pressable, ViewStyle, StyleSheet } from 'react-native';
-import { Text } from './Text';
-import { colors, radii, spacing } from '@/constants/theme';
+import { View, StyleSheet, type ViewProps } from 'react-native';
+import { colors, borderRadius, shadows, spacing } from '@/constants/theme';
 
-export interface CardProps {
-  title?: string;
-  children?: React.ReactNode;
-  onPress?: () => void;
-  style?: ViewStyle;
-}
+type CardProps = ViewProps & {
+  children: React.ReactNode;
+  variant?: 'default' | 'elevated' | 'outlined';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+};
 
-export function Card({ title, children, onPress, style }: CardProps) {
-  const content = (
-    <>
-      {title ? (
-        <Text variant="title" style={styles.title}>
-          {title}
-        </Text>
-      ) : null}
+export function Card({ 
+  children, 
+  style, 
+  variant = 'default',
+  padding = 'md',
+  ...props 
+}: CardProps) {
+  return (
+    <View style={[
+      styles.card,
+      styles[variant],
+      styles[`padding${padding.charAt(0).toUpperCase() + padding.slice(1)}`],
+      style
+    ]} {...props}>
       {children}
-    </>
+    </View>
   );
-
-  const baseStyle = [styles.card, style];
-
-  if (onPress) {
-    return (
-      <Pressable onPress={onPress} style={({ pressed }) => [baseStyle, pressed && styles.pressed]}>
-        {content}
-      </Pressable>
-    );
-  }
-  return <View style={baseStyle}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+  },
+  default: {
+    ...shadows.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  title: { marginBottom: spacing.sm },
-  pressed: { opacity: 0.9 },
+  elevated: {
+    ...shadows.lg,
+  },
+  outlined: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  paddingNone: {
+    padding: 0,
+  },
+  paddingSm: {
+    padding: spacing.sm,
+  },
+  paddingMd: {
+    padding: spacing.md,
+  },
+  paddingLg: {
+    padding: spacing.lg,
+  },
 });
