@@ -4,6 +4,7 @@
     "slug": "gastrack",
     "plugins": ["expo-router"],
     "version": "1.0.0",
+    "experiments": { "tsConfigPaths": true },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "gastrack",
