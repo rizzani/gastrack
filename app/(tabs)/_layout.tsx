@@ -20,7 +20,8 @@ export default function TabsLayout() {
           shadowRadius: 8,
           height: Platform.OS === 'ios' ? 88 : 70,
           paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-          paddingTop: 8,
+          paddingTop: Platform.OS === 'ios' ? 8 : 6,
+          paddingHorizontal: 8,
           position: 'absolute',
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
@@ -28,11 +29,18 @@ export default function TabsLayout() {
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
-          marginTop: 4,
+          marginTop: 2,
+          marginBottom: 0,
           letterSpacing: 0.2,
         },
         tabBarIconStyle: {
-          marginTop: 4,
+          marginTop: 0,
+          marginBottom: 0,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+          justifyContent: 'center',
+          alignItems: 'center',
         },
         tabBarHideOnKeyboard: true,
       }}
@@ -110,8 +118,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="owed"
         options={{
-          title: 'Owed',
-          tabBarButton: () => null,
+          href: null,
         }}
       />
     </Tabs>
