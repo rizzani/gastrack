@@ -80,14 +80,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="owed"
+        name="finance"
         options={{
-          title: 'Owed',
-          tabBarLabel: 'Owed',
-          href: null,
+          title: 'Finance',
+          tabBarLabel: 'Finance',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
-              name={focused ? 'receipt' : 'receipt-outline'}
+              name={focused ? 'wallet' : 'wallet-outline'}
               size={size}
               color={color}
             />
@@ -106,6 +105,13 @@ export default function TabsLayout() {
               color={color}
             />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="owed"
+        options={{
+          title: 'Owed',
+          tabBarButton: () => null,
         }}
       />
     </Tabs>
