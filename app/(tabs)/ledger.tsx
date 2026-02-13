@@ -3,6 +3,7 @@ import { Text, StyleSheet, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/ui/Screen';
 import { MovementForm, type MovementFormRef } from '@/components/movements/MovementForm';
+import { TAB_BAR_CLEARANCE } from '@/components/ui/ScreenFlatList';
 import { colors, typography, spacing } from '@/constants/theme';
 
 export default function LedgerScreen() {
@@ -13,12 +14,12 @@ export default function LedgerScreen() {
   };
 
   return (
-    <Screen>
+    <Screen contentContainerStyle={styles.screenContent}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.title}>Record Movement</Text>
-            <Text style={styles.subtitle}>Swap, Loan, Return, or Restock</Text>
+            <Text style={styles.subtitle}>Sell, Loan, Return, Restock, or Add</Text>
           </View>
           <Pressable onPress={handleReset} style={styles.resetButton}>
             <Ionicons name="refresh-outline" size={22} color={colors.primary} />
@@ -31,6 +32,9 @@ export default function LedgerScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenContent: {
+    paddingBottom: spacing.xl + TAB_BAR_CLEARANCE,
+  },
   header: {
     marginBottom: spacing.lg,
   },

@@ -1,0 +1,51 @@
+{
+  "cli": {
+    "version": ">= 13.2.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://nyc.cloud.appwrite.io/v1",
+        "EXPO_PUBLIC_APPWRITE_PROJECT": "6975cf5600297955323f",
+        "EXPO_PUBLIC_APPWRITE_DATABASE": "gastrack"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://nyc.cloud.appwrite.io/v1",
+        "EXPO_PUBLIC_APPWRITE_PROJECT": "6975cf5600297955323f",
+        "EXPO_PUBLIC_APPWRITE_DATABASE": "gastrack"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://nyc.cloud.appwrite.io/v1",
+        "EXPO_PUBLIC_APPWRITE_PROJECT": "6975cf5600297955323f",
+        "EXPO_PUBLIC_APPWRITE_DATABASE": "gastrack"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}

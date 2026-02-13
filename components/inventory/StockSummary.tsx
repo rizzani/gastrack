@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
+import { useResponsive } from '@/hooks/useResponsive';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
 import type { InventoryRecord } from '@/lib/types';
 
@@ -9,6 +10,7 @@ type StockSummaryProps = {
 };
 
 export function StockSummary({ inventory }: StockSummaryProps) {
+  const { isCompact, isVeryCompact } = useResponsive();
   const totals = inventory.reduce(
     (acc, inv) => ({
       full: acc.full + inv.full,
@@ -39,28 +41,28 @@ export function StockSummary({ inventory }: StockSummaryProps) {
           <Text style={styles.totalBadgeText}>{totalStock}</Text>
         </View>
       </View>
-      <View style={styles.counts}>
-        <View style={[styles.countItem, styles.fullItem]}>
-          <View style={[styles.countIcon, styles.fullIcon]}>
-            <Ionicons name="checkmark-circle" size={24} color={colors.surface} />
+      <View style={[styles.counts, isCompact && styles.countsCompact]}>
+        <View style={[styles.countItem, styles.fullItem, isCompact && styles.countItemCompact, isVeryCompact && styles.countItemVeryCompact]}>
+          <View style={[styles.countIcon, styles.fullIcon, isCompact && styles.countIconCompact]}>
+            <Ionicons name="checkmark-circle" size={isCompact ? 20 : 24} color={colors.surface} />
           </View>
           <View style={styles.countContent}>
             <Text style={[styles.countValue, styles.fullCount]}>{totals.full}</Text>
             <Text style={styles.countLabel}>Full</Text>
           </View>
         </View>
-        <View style={[styles.countItem, styles.emptyItem]}>
-          <View style={[styles.countIcon, styles.emptyIcon]}>
-            <Ionicons name="remove-circle" size={24} color={colors.surface} />
+        <View style={[styles.countItem, styles.emptyItem, isCompact && styles.countItemCompact, isVeryCompact && styles.countItemVeryCompact]}>
+          <View style={[styles.countIcon, styles.emptyIcon, isCompact && styles.countIconCompact]}>
+            <Ionicons name="remove-circle" size={isCompact ? 20 : 24} color={colors.surface} />
           </View>
           <View style={styles.countContent}>
             <Text style={[styles.countValue, styles.emptyCount]}>{totals.empty}</Text>
             <Text style={styles.countLabel}>Empty</Text>
           </View>
         </View>
-        <View style={[styles.countItem, styles.damagedItem]}>
-          <View style={[styles.countIcon, styles.damagedIcon]}>
-            <Ionicons name="warning" size={24} color={colors.surface} />
+        <View style={[styles.countItem, styles.damagedItem, isCompact && styles.countItemCompact, isVeryCompact && styles.countItemVeryCompact]}>
+          <View style={[styles.countIcon, styles.damagedIcon, isCompact && styles.countIconCompact]}>
+            <Ionicons name="warning" size={isCompact ? 20 : 24} color={colors.surface} />
           </View>
           <View style={styles.countContent}>
             <Text style={[styles.countValue, styles.damagedCount]}>{totals.damaged}</Text>
@@ -113,15 +115,27 @@ const styles = StyleSheet.create({
   },
   counts: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: spacing.lg,
+  },
+  countsCompact: {
+    gap: spacing.sm,
   },
   countItem: {
     flex: 1,
+    minWidth: 72,
     alignItems: 'center',
     padding: spacing.md,
     borderRadius: borderRadius.md,
     backgroundColor: colors.gray50,
     marginHorizontal: spacing.xs,
+  },
+  countItemCompact: {
+    padding: spacing.sm,
+    marginHorizontal: 0,
+  },
+  countItemVeryCompact: {
+    minWidth: 56,
   },
   fullItem: {
     backgroundColor: colors.success + '10',
@@ -139,6 +153,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
+  },
+  countIconCompact: {
+    width: 36,
+    height: 36,
+    marginBottom: spacing.xs,
   },
   fullIcon: {
     backgroundColor: colors.success,

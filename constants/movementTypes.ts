@@ -1,5 +1,5 @@
 /**
- * Movement type constants: swap, loan, return, restock.
+ * Movement type constants: swap, loan, return, restock, add.
  */
 
 import type { MovementType } from '@/lib/types';
@@ -9,13 +9,15 @@ export const MOVEMENT_TYPES: readonly MovementType[] = [
   'loan',
   'return',
   'restock',
+  'add',
 ] as const;
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
-  swap: 'Swap (Full out, Empty back)',
-  loan: 'Loan (Full out, no Empty back)',
-  return: 'Return (Empty back, settle owed)',
-  restock: 'Restock (From plant: Full +, Empty −)',
+  swap: 'Sell',
+  loan: 'Loan',
+  return: 'Return',
+  restock: 'Restock',
+  add: 'Add',
 };
 
 export function getMovementTypeLabel(type: MovementType): string {

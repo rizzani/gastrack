@@ -30,6 +30,7 @@ export type SummaryTotals = {
   payments: number;
   refills: number;
   expenses: number;
+  adds: number;
 };
 
 export type DateRange = { start: string; end: string };
@@ -43,34 +44,48 @@ async function fetchOutstanding(userId: string): Promise<CustomerBalance[]> {
     .filter((b) => b.balance > 0);
 }
 
+const SUMMARY_PAGE_SIZE = 500;
+
 async function fetchSummaryInRange(
   userId: string,
   start: string,
   end: string
 ): Promise<SummaryTotals> {
-  const { documents } = await db.listDocuments(IDs.database, IDs.finance_transactions, [
-    Query.equal('userId', userId),
-    Query.greaterThanEqual('createdAt', start),
-    Query.lessThanEqual('createdAt', end),
-  ]);
-  const totals: SummaryTotals = { sales: 0, payments: 0, refills: 0, expenses: 0 };
-  for (const d of documents) {
-    const t = fromAppwriteFinanceTransaction(d);
-    switch (t.type) {
-      case 'sale_cash':
-      case 'sale_credit':
-        totals.sales += t.amount;
-        break;
-      case 'payment':
-        totals.payments += t.amount;
-        break;
-      case 'refill':
-        totals.refills += t.amount;
-        break;
-      case 'expense':
-        totals.expenses += t.amount;
-        break;
+  const totals: SummaryTotals = { sales: 0, payments: 0, refills: 0, expenses: 0, adds: 0 };
+  let offset = 0;
+
+  while (true) {
+    const { documents } = await db.listDocuments(IDs.database, IDs.finance_transactions, [
+      Query.equal('userId', userId),
+      Query.greaterThanEqual('createdAt', start),
+      Query.lessThanEqual('createdAt', end),
+      Query.orderAsc('createdAt'),
+      Query.limit(SUMMARY_PAGE_SIZE),
+      Query.offset(offset),
+    ]);
+    for (const d of documents) {
+      const t = fromAppwriteFinanceTransaction(d);
+      switch (t.type) {
+        case 'sale_cash':
+        case 'sale_credit':
+          totals.sales += t.amount;
+          break;
+        case 'payment':
+          totals.payments += t.amount;
+          break;
+        case 'refill':
+          totals.refills += t.amount;
+          break;
+        case 'expense':
+          totals.expenses += t.amount;
+          break;
+        case 'add':
+          totals.adds += t.amount;
+          break;
+      }
     }
+    if (documents.length < SUMMARY_PAGE_SIZE) break;
+    offset += documents.length;
   }
   return totals;
 }
@@ -234,6 +249,7 @@ export function useSummaryTotals(range: DateRange | null) {
     payments: 0,
     refills: 0,
     expenses: 0,
+    adds: 0,
   };
 
   const getSummaryTotals = (): SummaryTotals => totals;

@@ -1,12 +1,14 @@
 import { ScrollView, StyleSheet, KeyboardAvoidingView, Platform, type ScrollViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/constants/theme';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type ScreenProps = ScrollViewProps & {
   children: React.ReactNode;
 };
 
 export function Screen({ children, style, contentContainerStyle, ...props }: ScreenProps) {
+  const { horizontalPadding } = useResponsive();
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView
@@ -16,7 +18,11 @@ export function Screen({ children, style, contentContainerStyle, ...props }: Scr
       >
         <ScrollView
           style={[styles.scrollView, style]}
-          contentContainerStyle={[styles.content, contentContainerStyle]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingHorizontal: horizontalPadding, paddingBottom: spacing.xl },
+            contentContainerStyle,
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           {...props}
@@ -40,7 +46,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
   },
 });

@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenFlatList } from '@/components/ui/ScreenFlatList';
 import { StockRow } from '@/components/inventory/StockRow';
 import { StockSummary } from '@/components/inventory/StockSummary';
-import { Button } from '@/components/ui/Button';
 import { Skeleton, SkeletonList } from '@/components/ui/Skeleton';
 import { ErrorWithRetry } from '@/components/ui/ErrorWithRetry';
 import { useInventory } from '@/hooks/useInventory';
@@ -74,12 +73,6 @@ export default function InventoryScreen() {
                 </Text>
               </View>
             </View>
-            <Pressable
-              style={styles.addButton}
-              onPress={() => router.push('/inventory/new')}
-            >
-              <Ionicons name="add" size={24} color={colors.surface} />
-            </Pressable>
           </View>
 
           {list.length > 0 && (
@@ -96,13 +89,8 @@ export default function InventoryScreen() {
           </View>
           <Text style={styles.emptyTitle}>No Inventory Yet</Text>
           <Text style={styles.emptyText}>
-            Start tracking your gas cylinder inventory by adding your first stock
+            Use Record → Add to add inventory (full or empty). Editing inventory here is disabled.
           </Text>
-          <Button
-            title="Add Inventory"
-            onPress={() => router.push('/inventory/new')}
-            style={styles.emptyButton}
-          />
         </View>
       }
     />
@@ -127,15 +115,6 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     ...typography.small,
     color: colors.textSecondary,
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.md,
   },
   summaryContainer: {
     marginBottom: spacing.md,
@@ -170,8 +149,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: spacing.md,
-  },
-  emptyButton: {
-    minWidth: 200,
   },
 });

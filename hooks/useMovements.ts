@@ -8,7 +8,7 @@ import { ID, Query } from 'appwrite';
 import { db, IDs } from '@/lib/appwrite';
 import { executeMovement } from '@/lib/movements';
 import { queryKeys } from '@/lib/queryKeys';
-import type { MovementType } from '@/lib/types';
+import type { MovementType, AddKind } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 export type CreateMovementParams = {
@@ -17,13 +17,15 @@ export type CreateMovementParams = {
   quantity: number;
   customerId?: string;
   notes?: string;
+  /** When type is 'add': 'full' | 'empty'. */
+  addKind?: AddKind;
 };
 
 async function createMovement(
   userId: string,
   params: CreateMovementParams
 ): Promise<{ movementId: string }> {
-  const { type, cylinderTypeId, quantity, customerId, notes } = params;
+  const { type, cylinderTypeId, quantity, customerId, notes, addKind } = params;
 
   let { documents: invDocs } = await db.listDocuments(
     IDs.database,
@@ -79,6 +81,7 @@ async function createMovement(
     quantity,
     customerId,
     notes,
+    addKind,
     inventory,
     owed,
   });

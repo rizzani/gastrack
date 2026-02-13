@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { useCylinderTypes } from '@/hooks/useCylinderTypes';
+import { useResponsive } from '@/hooks/useResponsive';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
 import type { InventoryRecord } from '@/lib/types';
 
@@ -12,6 +13,8 @@ type StockRowProps = {
 
 export function StockRow({ inventory, onPress }: StockRowProps) {
   const { cylinderTypes } = useCylinderTypes();
+  const { isCompact, isVeryCompact } = useResponsive();
+  const imageSize = isVeryCompact ? 56 : isCompact ? 72 : 100;
   const total = inventory.full + inventory.empty + inventory.damaged;
   const fullPercentage = total > 0 ? Math.round((inventory.full / total) * 100) : 0;
   
@@ -24,12 +27,12 @@ export function StockRow({ inventory, onPress }: StockRowProps) {
           {cylinderType?.img ? (
             <Image
               source={{ uri: cylinderType.img }}
-              style={styles.image}
+              style={[styles.image, { width: imageSize, height: imageSize }]}
               resizeMode="contain"
             />
           ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="cube-outline" size={24} color={colors.textTertiary} />
+            <View style={[styles.imagePlaceholder, { width: imageSize, height: imageSize }]}>
+              <Ionicons name="cube-outline" size={isVeryCompact ? 18 : isCompact ? 20 : 24} color={colors.textTertiary} />
             </View>
           )}
 
@@ -124,6 +127,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
+    minWidth: 0,
   },
   typeLabel: {
     ...typography.h4,
@@ -136,10 +140,12 @@ const styles = StyleSheet.create({
   },
   stats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: spacing.md,
   },
   statItem: {
     flex: 1,
+    minWidth: 40,
     alignItems: 'center',
     marginHorizontal: spacing.xs,
   },
