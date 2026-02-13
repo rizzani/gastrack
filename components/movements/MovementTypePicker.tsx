@@ -19,6 +19,8 @@ const getMovementIcon = (type: MovementType) => {
       return 'arrow-back-circle';
     case 'restock':
       return 'add-circle';
+    case 'add':
+      return 'cube-outline';
     default:
       return 'ellipse';
   }
@@ -34,6 +36,8 @@ const getMovementColor = (type: MovementType) => {
       return colors.primary;
     case 'restock':
       return colors.accent;
+    case 'add':
+      return colors.primaryDark;
     default:
       return colors.textSecondary;
   }

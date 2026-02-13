@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
+    minWidth: 0,
   },
   default: {
     ...shadows.md,

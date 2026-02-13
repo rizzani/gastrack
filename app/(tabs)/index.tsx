@@ -11,6 +11,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useOwed } from '@/hooks/useOwed';
 import { useCylinderTypes } from '@/hooks/useCylinderTypes';
 import { useAuth } from '@/contexts/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { todayRange } from '@/lib/dateUtils';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
 
@@ -20,6 +21,7 @@ function formatMoney(n: number): string {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { gridGap, minCardWidth, isCompact, isVeryCompact } = useResponsive();
   const { logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const today = useMemo(() => todayRange(), []);
@@ -31,7 +33,7 @@ export default function DashboardScreen() {
   const { cylinderTypes } = useCylinderTypes();
 
   const totalOutstanding = outstanding.reduce((s, b) => s + b.balance, 0);
-  const todayProfit = todayTotals.sales - todayTotals.refills - todayTotals.expenses;
+  const todayProfit = todayTotals.sales - todayTotals.refills - todayTotals.adds;
   
   const totalInventory = inventory.reduce(
     (acc, inv) => acc + inv.full + inv.empty + inv.damaged,
@@ -93,11 +95,13 @@ export default function DashboardScreen() {
         <View>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.headerIcon}>
-              <Ionicons name="speedometer-outline" size={24} color={colors.primary} />
+            <View style={[styles.headerIcon, isCompact && styles.headerIconCompact]}>
+              <Ionicons name="speedometer-outline" size={isCompact ? 20 : 24} color={colors.primary} />
             </View>
             <View style={styles.headerContent}>
-              <Text style={styles.title}>Dashboard</Text>
+              <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>
+                Dashboard
+              </Text>
               <Text style={styles.subtitle}>Quick overview of your business</Text>
             </View>
             <Pressable
@@ -105,6 +109,7 @@ export default function DashboardScreen() {
               disabled={loggingOut}
               style={({ pressed }) => [
                 styles.logoutButton,
+                isCompact && styles.logoutButtonCompact,
                 pressed && styles.logoutButtonPressed,
               ]}
               accessibilityLabel="Log out"
@@ -120,8 +125,8 @@ export default function DashboardScreen() {
           {/* Key Metrics */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Today's Performance</Text>
-            <View style={styles.metricsGrid}>
-              <Card variant="elevated" style={styles.metricCard}>
+            <View style={[styles.metricsGrid, { gap: gridGap }]}>
+              <Card variant="elevated" style={[styles.metricCard, { minWidth: minCardWidth }]}>
                 <View style={styles.metricIconContainer}>
                   <Ionicons name="cash-outline" size={24} color={colors.success} />
                 </View>
@@ -129,17 +134,32 @@ export default function DashboardScreen() {
                 <Text style={styles.metricValue}>{formatMoney(todayTotals.sales)}</Text>
               </Card>
 
-              <Card variant="elevated" style={styles.metricCard}>
-                <View style={[styles.metricIconContainer, styles.profitIconContainer]}>
-                  <Ionicons name="trending-up-outline" size={24} color={colors.success} />
+              <Card variant="elevated" style={[styles.metricCard, { minWidth: minCardWidth }]}>
+                <View
+                  style={[
+                    styles.metricIconContainer,
+                    todayProfit >= 0 ? styles.profitIconContainer : styles.profitIconContainerNegative,
+                  ]}
+                >
+                  <Ionicons
+                    name={todayProfit >= 0 ? 'trending-up-outline' : 'trending-down-outline'}
+                    size={24}
+                    color={todayProfit >= 0 ? colors.success : colors.error}
+                  />
                 </View>
                 <Text style={styles.metricLabel}>Profit</Text>
-                <Text style={[styles.metricValue, styles.profitValue]}>
+                <Text
+                  style={[
+                    styles.metricValue,
+                    styles.profitValue,
+                    todayProfit < 0 && styles.profitValueNegative,
+                  ]}
+                >
                   {formatMoney(todayProfit)}
                 </Text>
               </Card>
 
-              <Card variant="elevated" style={styles.metricCard}>
+              <Card variant="elevated" style={[styles.metricCard, { minWidth: minCardWidth }]}>
                 <View style={[styles.metricIconContainer, styles.creditIconContainer]}>
                   <Ionicons name="card-outline" size={24} color={colors.warning} />
                 </View>
@@ -147,7 +167,7 @@ export default function DashboardScreen() {
                 <Text style={styles.metricValue}>{formatMoney(totalOutstanding)}</Text>
               </Card>
 
-              <Card variant="elevated" style={styles.metricCard}>
+              <Card variant="elevated" style={[styles.metricCard, { minWidth: minCardWidth }]}>
                 <View style={[styles.metricIconContainer, styles.inventoryIconContainer]}>
                   <Ionicons name="cube-outline" size={24} color={colors.primary} />
                 </View>
@@ -166,7 +186,7 @@ export default function DashboardScreen() {
               </Pressable>
             </View>
             <Card variant="elevated" style={styles.inventoryCard}>
-              <View style={styles.inventoryStats}>
+              <View style={[styles.inventoryStats, isCompact && styles.inventoryStatsCompact]}>
                 <View style={styles.inventoryStat}>
                   <View style={[styles.inventoryBadge, styles.fullBadge]}>
                     <Ionicons name="checkmark-circle" size={16} color={colors.success} />
@@ -220,22 +240,22 @@ export default function DashboardScreen() {
           {/* Quick Stats */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Stats</Text>
-            <View style={styles.quickStatsGrid}>
-              <View style={styles.quickStatSlot}>
+            <View style={[styles.quickStatsGrid, { gap: gridGap }]}>
+              <View style={[styles.quickStatSlot, isVeryCompact && styles.quickStatSlotCompact]}>
                 <Card variant="default" style={styles.quickStatCard}>
                   <Ionicons name="people-outline" size={20} color={colors.primary} />
                   <Text style={styles.quickStatValue}>{customers.length}</Text>
                   <Text style={styles.quickStatLabel}>Customers</Text>
                 </Card>
               </View>
-              <Pressable style={styles.quickStatSlot} onPress={() => router.push('/(tabs)/owed')}>
+              <Pressable style={[styles.quickStatSlot, isVeryCompact && styles.quickStatSlotCompact]} onPress={() => router.push('/(tabs)/owed')}>
                 <Card variant="default" style={styles.quickStatCard}>
                   <Ionicons name="return-down-back-outline" size={20} color={colors.warning} />
                   <Text style={styles.quickStatValue}>{totalOwed}</Text>
                   <Text style={styles.quickStatLabel}>Owed Cylinders</Text>
                 </Card>
               </Pressable>
-              <View style={styles.quickStatSlot}>
+              <View style={[styles.quickStatSlot, isVeryCompact && styles.quickStatSlotCompact]}>
                 <Card variant="default" style={styles.quickStatCard}>
                   <Ionicons name="layers-outline" size={20} color={colors.primary} />
                   <Text style={styles.quickStatValue}>{inventory.length}</Text>
@@ -248,7 +268,7 @@ export default function DashboardScreen() {
           {/* Quick Actions */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.quickActionsGrid}>
+            <View style={[styles.quickActionsGrid, { gap: gridGap }]}>
               <Pressable
                 style={styles.quickAction}
                 onPress={() => router.push('/ledger')}
@@ -316,6 +336,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.md,
   },
+  headerIconCompact: {
+    width: 40,
+    height: 40,
+  },
+  titleCompact: {
+    fontSize: 24,
+  },
+  logoutButtonCompact: {
+    width: 40,
+    height: 40,
+  },
   headerContent: {
     flex: 1,
     minWidth: 0,
@@ -366,7 +397,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    minWidth: '47%',
+    flexBasis: 120,
     padding: spacing.md,
   },
   metricIconContainer: {
@@ -380,6 +411,9 @@ const styles = StyleSheet.create({
   },
   profitIconContainer: {
     backgroundColor: colors.success + '15',
+  },
+  profitIconContainerNegative: {
+    backgroundColor: colors.error + '15',
   },
   creditIconContainer: {
     backgroundColor: colors.warning + '15',
@@ -399,21 +433,29 @@ const styles = StyleSheet.create({
   profitValue: {
     color: colors.success,
   },
+  profitValueNegative: {
+    color: colors.error,
+  },
   inventoryCard: {
     padding: spacing.md,
   },
   inventoryStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-around',
     marginBottom: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
+  inventoryStatsCompact: {
+    gap: spacing.sm,
+  },
   inventoryStat: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    minWidth: 64,
   },
   inventoryBadge: {
     width: 32,
@@ -467,13 +509,18 @@ const styles = StyleSheet.create({
   },
   quickStatsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   quickStatSlot: {
     flex: 1,
-    flexBasis: 0,
-    minWidth: 0,
-    height: 96,
+    flexBasis: 100,
+    minWidth: 100,
+    minHeight: 88,
+  },
+  quickStatSlotCompact: {
+    minWidth: 72,
+    flexBasis: 72,
   },
   quickStatCard: {
     width: '100%',
@@ -500,7 +547,7 @@ const styles = StyleSheet.create({
   },
   quickAction: {
     flex: 1,
-    minWidth: '47%',
+    minWidth: 100,
   },
   quickActionCard: {
     padding: spacing.md,

@@ -94,17 +94,42 @@ async function viewCollection(collectionName) {
   }
 }
 
+async function checkFinanceTypeEnum() {
+  const coll = collections.finance_transactions;
+  try {
+    const { attributes } = await databases.listAttributes(database, coll);
+    const typeAttr = attributes.find((a) => a.key === 'type');
+    if (!typeAttr) {
+      console.log('\n⚠️ finance_transactions: no "type" attribute found');
+      return;
+    }
+    const elements = typeAttr.elements || [];
+    const hasAdd = elements.includes('add');
+    console.log('\n📋 finance_transactions.type (enum)');
+    console.log('─'.repeat(60));
+    console.log('  Elements:', elements.join(', ') || '(none)');
+    console.log('  "add" in enum:', hasAdd ? '✓ YES' : '✗ NO');
+    if (!hasAdd) {
+      console.log('  → Add "add" to the type enum in Appwrite Console (Database → finance_transactions → Attributes → type)');
+    }
+  } catch (e) {
+    console.error('\n❌ checkFinanceTypeEnum:', e.message);
+  }
+}
+
 async function main() {
   console.log('🔍 Viewing Appwrite Collections');
   console.log('═'.repeat(60));
   console.log(`Database: ${database}`);
   console.log(`Project: ${project}`);
   console.log(`Endpoint: ${endpoint}`);
-  
+
+  await checkFinanceTypeEnum();
+
   for (const [key, collectionName] of Object.entries(collections)) {
     await viewCollection(collectionName);
   }
-  
+
   console.log('\n✅ Done');
 }
 

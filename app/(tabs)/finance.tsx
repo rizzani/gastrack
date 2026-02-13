@@ -1,16 +1,23 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenFlatList } from '@/components/ui/ScreenFlatList';
+import { useResponsive } from '@/hooks/useResponsive';
 import { Card } from '@/components/ui/Card';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ErrorWithRetry } from '@/components/ui/ErrorWithRetry';
-import { useFinance, useSummaryTotals } from '@/hooks/useFinance';
+import { useFinance, useSummaryTotals, type SummaryTotals } from '@/hooks/useFinance';
 import { useCustomers } from '@/hooks/useCustomers';
 import { usePrices } from '@/hooks/usePrices';
 import { useCylinderTypes } from '@/hooks/useCylinderTypes';
-import { todayRange, thisWeekRange } from '@/lib/dateUtils';
+import {
+  todayRange,
+  thisWeekRange,
+  allTimeRange,
+  thisMonthRange,
+  monthRange,
+} from '@/lib/dateUtils';
 import { getRefillPriceStats } from '@/lib/refillPriceStats';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
 import type { CustomerBalance } from '@/lib/types';
@@ -31,17 +38,155 @@ function formatDate(iso: string): string {
   }
 }
 
+function formatMonthYear(year: number, month: number): string {
+  return new Date(year, month, 1).toLocaleDateString('en-PH', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function profitFromTotals(t: SummaryTotals): number {
+  return t.sales - t.refills - t.adds;
+}
+
+type SummaryCardProps = {
+  title: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  totals: SummaryTotals;
+  loading: boolean;
+  headerRight?: React.ReactNode;
+};
+
+function SummaryCard({ title, icon, totals, loading, headerRight }: SummaryCardProps) {
+  const profit = profitFromTotals(totals);
+  const profitNegative = profit < 0;
+  return (
+    <Card variant="elevated" style={styles.summaryCard}>
+      <View style={styles.summaryHeader}>
+        <View style={styles.summaryHeaderLeft}>
+          <Ionicons name={icon} size={20} color={colors.primary} />
+          <Text style={styles.summaryCardTitle}>{title}</Text>
+        </View>
+        {headerRight}
+      </View>
+      {loading ? (
+        <Text style={styles.muted}>Loading…</Text>
+      ) : (
+        <View style={styles.summaryGrid}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Sales</Text>
+            <Text style={styles.summaryValue}>{formatMoney(totals.sales)}</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Payments</Text>
+            <Text style={styles.summaryValue}>{formatMoney(totals.payments)}</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Refills</Text>
+            <Text style={[styles.summaryValue, styles.expenseValue]}>{formatMoney(totals.refills)}</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Purchase cost</Text>
+            <Text style={[styles.summaryValue, styles.expenseValue]}>{formatMoney(totals.adds)}</Text>
+          </View>
+          <View style={[styles.summaryItem, styles.profitItem]}>
+            <Text style={styles.profitLabel}>Profit</Text>
+            <Text
+              style={[styles.profitValue, profitNegative && styles.profitValueNegative]}
+            >
+              {formatMoney(profit)}
+            </Text>
+          </View>
+        </View>
+      )}
+    </Card>
+  );
+}
+
 export default function FinanceScreen() {
   const router = useRouter();
+  const { isCompact } = useResponsive();
   const { outstanding, outstandingLoading, outstandingError, outstandingErrorDetail, outstandingRefetch } = useFinance();
   const { customers } = useCustomers();
   const { cylinderTypes } = useCylinderTypes();
   const { getPriceHistory } = usePrices();
 
+  const now = useMemo(() => new Date(), []);
   const today = useMemo(() => todayRange(), []);
   const week = useMemo(() => thisWeekRange(), []);
+  const allTime = useMemo(() => allTimeRange(), []);
+  const thisMonth = useMemo(() => thisMonthRange(), []);
+
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
+  const viewMonthRange = useMemo(() => monthRange(viewYear, viewMonth), [viewYear, viewMonth]);
+
+  type CustomPeriod = 'month' | 'today' | 'week' | 'view_month';
+  const [customPeriod, setCustomPeriod] = useState<CustomPeriod>('month');
+
   const { totals: todayTotals, isLoading: todayLoading } = useSummaryTotals(today);
   const { totals: weekTotals, isLoading: weekLoading } = useSummaryTotals(week);
+  const { totals: overallTotals, isLoading: overallLoading } = useSummaryTotals(allTime);
+  const { totals: monthTotals, isLoading: monthLoading } = useSummaryTotals(thisMonth);
+  const { totals: viewMonthTotals, isLoading: viewMonthLoading } = useSummaryTotals(viewMonthRange);
+
+  const customTotals = useMemo(() => {
+    switch (customPeriod) {
+      case 'month':
+        return monthTotals;
+      case 'today':
+        return todayTotals;
+      case 'week':
+        return weekTotals;
+      case 'view_month':
+        return viewMonthTotals;
+    }
+  }, [customPeriod, monthTotals, todayTotals, weekTotals, viewMonthTotals]);
+
+  const customLoading = useMemo(() => {
+    switch (customPeriod) {
+      case 'month':
+        return monthLoading;
+      case 'today':
+        return todayLoading;
+      case 'week':
+        return weekLoading;
+      case 'view_month':
+        return viewMonthLoading;
+    }
+  }, [customPeriod, monthLoading, todayLoading, weekLoading, viewMonthLoading]);
+
+  const customTitle = useMemo(() => {
+    switch (customPeriod) {
+      case 'month':
+        return 'This month';
+      case 'today':
+        return 'Today';
+      case 'week':
+        return 'This week';
+      case 'view_month':
+        return formatMonthYear(viewYear, viewMonth);
+    }
+  }, [customPeriod, viewYear, viewMonth]);
+
+  const customProfit = profitFromTotals(customTotals);
+
+  const goPrevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else {
+      setViewMonth((m) => m - 1);
+    }
+  };
+  const goNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else {
+      setViewMonth((m) => m + 1);
+    }
+  };
 
   const refillStatsByType = useMemo(() => {
     const out: { cylinderTypeId: string; label: string; stats: ReturnType<typeof getRefillPriceStats> }[] = [];
@@ -117,8 +262,8 @@ export default function FinanceScreen() {
       ListHeaderComponent={
         <View>
           <View style={styles.header}>
-            <View style={styles.headerIcon}>
-              <Ionicons name="wallet-outline" size={24} color={colors.primary} />
+            <View style={[styles.headerIcon, isCompact && styles.headerIconCompact]}>
+              <Ionicons name="wallet-outline" size={isCompact ? 20 : 24} color={colors.primary} />
             </View>
             <View style={styles.headerContent}>
               <Text style={styles.title}>Finance</Text>
@@ -128,69 +273,89 @@ export default function FinanceScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Summary</Text>
+            <SummaryCard
+              title="Overall"
+              icon="trending-up-outline"
+              totals={overallTotals}
+              loading={overallLoading}
+            />
             <Card variant="elevated" style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
-                <Ionicons name="today-outline" size={20} color={colors.primary} />
-                <Text style={styles.summaryCardTitle}>Today</Text>
+                <View style={styles.summaryHeaderLeft}>
+                  <Ionicons name="options-outline" size={20} color={colors.primary} />
+                  <Text style={styles.summaryCardTitle}>Customize</Text>
+                </View>
+                {customPeriod === 'view_month' && (
+                  <View style={styles.monthNav}>
+                    <Pressable onPress={goPrevMonth} hitSlop={8} style={styles.monthNavBtn}>
+                      <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                    </Pressable>
+                    <Pressable onPress={goNextMonth} hitSlop={8} style={styles.monthNavBtn}>
+                      <Ionicons name="chevron-forward" size={22} color={colors.primary} />
+                    </Pressable>
+                  </View>
+                )}
               </View>
-              {todayLoading ? (
+              <View style={styles.periodChips}>
+                {(['month', 'today', 'week', 'view_month'] as const).map((p) => (
+                  <Pressable
+                    key={p}
+                    onPress={() => setCustomPeriod(p)}
+                    style={[styles.periodChip, customPeriod === p && styles.periodChipActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.periodChipText,
+                        customPeriod === p && styles.periodChipTextActive,
+                      ]}
+                    >
+                      {p === 'month'
+                        ? 'Month'
+                        : p === 'today'
+                          ? 'Today'
+                          : p === 'week'
+                            ? 'Week'
+                            : 'View month'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {customPeriod === 'view_month' && (
+                <Text style={styles.customizeSubtitle}>{customTitle}</Text>
+              )}
+              {customLoading ? (
                 <Text style={styles.muted}>Loading…</Text>
               ) : (
                 <View style={styles.summaryGrid}>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Sales</Text>
-                    <Text style={styles.summaryValue}>{formatMoney(todayTotals.sales)}</Text>
+                    <Text style={styles.summaryValue}>{formatMoney(customTotals.sales)}</Text>
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Payments</Text>
-                    <Text style={styles.summaryValue}>{formatMoney(todayTotals.payments)}</Text>
+                    <Text style={styles.summaryValue}>{formatMoney(customTotals.payments)}</Text>
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Refills</Text>
-                    <Text style={[styles.summaryValue, styles.expenseValue]}>{formatMoney(todayTotals.refills)}</Text>
-                  </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Expenses</Text>
-                    <Text style={[styles.summaryValue, styles.expenseValue]}>{formatMoney(todayTotals.expenses)}</Text>
-                  </View>
-                  <View style={[styles.summaryItem, styles.profitItem]}>
-                    <Text style={styles.profitLabel}>Profit</Text>
-                    <Text style={styles.profitValue}>
-                      {formatMoney(todayTotals.sales - todayTotals.refills - todayTotals.expenses)}
+                    <Text style={[styles.summaryValue, styles.expenseValue]}>
+                      {formatMoney(customTotals.refills)}
                     </Text>
                   </View>
-                </View>
-              )}
-            </Card>
-            <Card variant="elevated" style={styles.summaryCard}>
-              <View style={styles.summaryHeader}>
-                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                <Text style={styles.summaryCardTitle}>This Week</Text>
-              </View>
-              {weekLoading ? (
-                <Text style={styles.muted}>Loading…</Text>
-              ) : (
-                <View style={styles.summaryGrid}>
                   <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Sales</Text>
-                    <Text style={styles.summaryValue}>{formatMoney(weekTotals.sales)}</Text>
-                  </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Payments</Text>
-                    <Text style={styles.summaryValue}>{formatMoney(weekTotals.payments)}</Text>
-                  </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Refills</Text>
-                    <Text style={[styles.summaryValue, styles.expenseValue]}>{formatMoney(weekTotals.refills)}</Text>
-                  </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Expenses</Text>
-                    <Text style={[styles.summaryValue, styles.expenseValue]}>{formatMoney(weekTotals.expenses)}</Text>
+                    <Text style={styles.summaryLabel}>Purchase cost</Text>
+                    <Text style={[styles.summaryValue, styles.expenseValue]}>
+                      {formatMoney(customTotals.adds)}
+                    </Text>
                   </View>
                   <View style={[styles.summaryItem, styles.profitItem]}>
                     <Text style={styles.profitLabel}>Profit</Text>
-                    <Text style={styles.profitValue}>
-                      {formatMoney(weekTotals.sales - weekTotals.refills - weekTotals.expenses)}
+                    <Text
+                      style={[
+                        styles.profitValue,
+                        customProfit < 0 && styles.profitValueNegative,
+                      ]}
+                    >
+                      {formatMoney(customProfit)}
                     </Text>
                   </View>
                 </View>
@@ -580,8 +745,13 @@ const styles = StyleSheet.create({
   summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
+  },
+  summaryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   summaryCardTitle: {
     ...typography.h4,
@@ -619,6 +789,45 @@ const styles = StyleSheet.create({
   profitValue: {
     ...typography.h4,
     color: colors.success,
+  },
+  profitValueNegative: {
+    color: colors.error,
+  },
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  monthNavBtn: {
+    padding: spacing.xs,
+  },
+  periodChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  periodChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.gray100,
+  },
+  periodChipActive: {
+    backgroundColor: colors.gray200,
+  },
+  periodChipText: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  periodChipTextActive: {
+    color: colors.primary,
+    ...typography.smallSemibold,
+  },
+  customizeSubtitle: {
+    ...typography.small,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   totalCard: {
     marginBottom: spacing.md,

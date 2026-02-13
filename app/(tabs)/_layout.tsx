@@ -1,15 +1,19 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '@/constants/theme';
+import { colors } from '@/constants/theme';
 import { Platform } from 'react-native';
+import { useResponsive } from '@/hooks/useResponsive';
 
 export default function TabsLayout() {
+  const { isCompact, tabBarHeight, tabBarIconSize, tabBarLabelSize } = useResponsive();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarScrollEnabled: isCompact,
         tabBarStyle: {
           backgroundColor: colors.tabBarBackground,
           borderTopWidth: 0,
@@ -18,16 +22,16 @@ export default function TabsLayout() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
-          height: Platform.OS === 'ios' ? 88 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-          paddingTop: Platform.OS === 'ios' ? 8 : 6,
-          paddingHorizontal: 8,
+          height: Platform.OS === 'ios' ? (isCompact ? 72 : 88) : tabBarHeight,
+          paddingBottom: Platform.OS === 'ios' ? (isCompact ? 20 : 28) : 10,
+          paddingTop: Platform.OS === 'ios' ? 6 : 4,
+          paddingHorizontal: isCompact ? 4 : 8,
           position: 'absolute',
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: tabBarLabelSize,
           fontWeight: '600',
           marginTop: 2,
           marginBottom: 0,
@@ -39,8 +43,10 @@ export default function TabsLayout() {
         },
         tabBarItemStyle: {
           paddingVertical: 4,
+          paddingHorizontal: isCompact ? 6 : 12,
           justifyContent: 'center',
           alignItems: 'center',
+          minWidth: isCompact ? 52 : undefined,
         },
         tabBarHideOnKeyboard: true,
       }}
@@ -76,8 +82,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="ledger"
         options={{
-          title: 'Ledger',
-          tabBarLabel: 'Ledger',
+          title: 'Record',
+          tabBarLabel: 'Record',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'book' : 'book-outline'}

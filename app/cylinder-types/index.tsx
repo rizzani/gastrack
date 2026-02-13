@@ -8,6 +8,7 @@ import { Skeleton, SkeletonList } from '@/components/ui/Skeleton';
 import { ErrorWithRetry } from '@/components/ui/ErrorWithRetry';
 import { useCylinderTypes } from '@/hooks/useCylinderTypes';
 import { useInventory } from '@/hooks/useInventory';
+import { setCylinderTypePickerResult } from '@/lib/pickerResult';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
 import type { CylinderType, MovementType } from '@/lib/types';
 
@@ -21,30 +22,28 @@ export default function CylinderTypesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter based on movement type
-  // For restock: only show cylinder types with empty > 0
-  // For other types: only show cylinder types with full > 0
+  // Add (full/empty): show all types — we can add to any, including no inventory yet
+  // Restock: only types with empty > 0
+  // Other (sell/loan/return): only types with full > 0
   const availableCylinderTypes = useMemo(() => {
+    if (movementType === 'add') {
+      return [...cylinderTypes];
+    }
     if (isLoadingInventory) return [];
-    
     if (movementType === 'restock') {
-      // Get cylinder type IDs that have inventory with empty > 0
       const cylinderTypeIdsWithEmpty = new Set(
         inventory
           .filter((inv) => inv.empty > 0)
           .map((inv) => inv.cylinderTypeId)
       );
-      
       return cylinderTypes.filter((ct) => cylinderTypeIdsWithEmpty.has(ct.id));
-    } else {
-      // Get cylinder type IDs that have inventory with full > 0
-      const cylinderTypeIdsWithFull = new Set(
-        inventory
-          .filter((inv) => inv.full > 0)
-          .map((inv) => inv.cylinderTypeId)
-      );
-      
-      return cylinderTypes.filter((ct) => cylinderTypeIdsWithFull.has(ct.id));
     }
+    const cylinderTypeIdsWithFull = new Set(
+      inventory
+        .filter((inv) => inv.full > 0)
+        .map((inv) => inv.cylinderTypeId)
+    );
+    return cylinderTypes.filter((ct) => cylinderTypeIdsWithFull.has(ct.id));
   }, [cylinderTypes, inventory, isLoadingInventory, movementType]);
 
   const filteredCylinderTypes = availableCylinderTypes.filter((ct) =>
@@ -111,15 +110,11 @@ export default function CylinderTypesScreen() {
         <Pressable
           onPress={() => {
             if (isSelectMode) {
-              // Navigate back to ledger with selected cylinder type ID and preserve movement type
-              const params: Record<string, string> = { selectedCylinderTypeId: item.id };
-              if (movementType) {
-                params.movementType = movementType;
-              }
-              router.navigate({
-                pathname: '/(tabs)/ledger',
-                params,
+              setCylinderTypePickerResult({
+                selectedCylinderTypeId: item.id,
+                movementType,
               });
+              router.back();
             }
           }}
         >
@@ -187,14 +182,18 @@ export default function CylinderTypesScreen() {
               ? 'No cylinder types found'
               : movementType === 'restock'
                 ? 'No empty inventory'
-                : 'No full inventory'}
+                : movementType === 'add'
+                  ? 'No cylinder types'
+                  : 'No full inventory'}
           </Text>
           <Text style={styles.emptyText}>
             {searchQuery
               ? 'Try a different search term'
               : movementType === 'restock'
                 ? 'No cylinder types have empty inventory available'
-                : 'No cylinder types have full inventory available'}
+                : movementType === 'add'
+                  ? 'Add cylinder types in app settings first'
+                  : 'No cylinder types have full inventory available'}
           </Text>
         </View>
       }

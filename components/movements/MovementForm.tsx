@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, StyleSheet, Alert, Image, Switch } from 'react-native';
+import { View, Text, StyleSheet, Alert, Image, Switch, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MovementTypePicker } from './MovementTypePicker';
@@ -17,7 +17,8 @@ import { useInventory } from '@/hooks/useInventory';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
 import { queryKeys } from '@/lib/queryKeys';
-import type { MovementType, Customer } from '@/lib/types';
+import { getCylinderTypePickerResult, clearCylinderTypePickerResult } from '@/lib/pickerResult';
+import type { MovementType, Customer, AddKind } from '@/lib/types';
 
 function formatMoney(n: number): string {
   return n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -39,6 +40,10 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
   const [amount, setAmount] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refillTotal, setRefillTotal] = useState<string>('');
+  const [addCost, setAddCost] = useState<string>('');
+  const [addSellPrice, setAddSellPrice] = useState<string>('');
+  const [addRefillCost, setAddRefillCost] = useState<string>('');
+  const [addKind, setAddKind] = useState<AddKind>('full');
   const lastProcessedCustomerId = useRef<string | null>(null);
   const lastProcessedCylinderTypeId = useRef<string | null>(null);
   const previousType = useRef<MovementType | undefined>(params.movementType);
@@ -69,6 +74,10 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
     setPayLater(false);
     setAmount('');
     setRefillTotal('');
+    setAddCost('');
+    setAddSellPrice('');
+    setAddRefillCost('');
+    setAddKind('full');
     lastProcessedCustomerId.current = null;
     lastProcessedCylinderTypeId.current = null;
     lastAutoFillCylinderTypeId.current = '';
@@ -142,50 +151,67 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
     }, [params.selectedCustomerId, customers, router])
   );
 
-  // Handle cylinder type selection from navigation
-  const processCylinderTypeSelection = () => {
+  // Handle cylinder type selection from navigation (params) or from picker store (router.back)
+  const processCylinderTypeSelection = useCallback(() => {
+    const stored = getCylinderTypePickerResult();
+    if (stored?.selectedCylinderTypeId && stored.selectedCylinderTypeId !== lastProcessedCylinderTypeId.current) {
+      const selectedCylinderType = cylinderTypes.find((c) => c.id === stored.selectedCylinderTypeId);
+      if (selectedCylinderType) {
+        setCylinderTypeId(stored.selectedCylinderTypeId);
+        lastProcessedCylinderTypeId.current = stored.selectedCylinderTypeId;
+        if (stored.movementType && stored.movementType !== type) {
+          setType(stored.movementType);
+          previousType.current = stored.movementType;
+          router.setParams({ movementType: stored.movementType });
+        }
+        clearCylinderTypePickerResult();
+      } else {
+        clearCylinderTypePickerResult();
+      }
+      return;
+    }
     if (params.selectedCylinderTypeId && params.selectedCylinderTypeId !== lastProcessedCylinderTypeId.current) {
-      // Wait for cylinder types to be loaded before processing selection
       if (cylinderTypes.length > 0 || params.selectedCylinderTypeId) {
         const selectedCylinderType = cylinderTypes.find((c) => c.id === params.selectedCylinderTypeId);
         if (selectedCylinderType) {
           setCylinderTypeId(params.selectedCylinderTypeId);
           lastProcessedCylinderTypeId.current = params.selectedCylinderTypeId;
         } else if (cylinderTypes.length > 0) {
-          // Cylinder type not found, clear the param to avoid stuck state
           router.setParams({ selectedCylinderTypeId: undefined });
           lastProcessedCylinderTypeId.current = null;
         }
       }
     }
-  };
+  }, [params.selectedCylinderTypeId, cylinderTypes, router, type]);
 
   useEffect(() => {
     processCylinderTypeSelection();
-  }, [params.selectedCylinderTypeId, cylinderTypes, router]);
+  }, [processCylinderTypeSelection]);
 
-  // Re-check params when screen comes into focus (handles navigation edge cases)
+  // Re-check when screen comes into focus (picker store or params)
   useFocusEffect(
     useCallback(() => {
       processCylinderTypeSelection();
-    }, [params.selectedCylinderTypeId, cylinderTypes, router])
+    }, [processCylinderTypeSelection])
   );
 
-  // Clear cylinder type selection when switching to/from restock
-  // since restock uses empty inventory while others use full inventory
+  // Clear cylinder type when switching between restock / add / sell–loan–return
+  // (each uses different filters: empty > 0, all, full > 0)
   useEffect(() => {
     const wasRestock = previousType.current === 'restock';
     const isRestock = type === 'restock';
-    
-    if (wasRestock !== isRestock && type !== undefined) {
+    const wasAdd = previousType.current === 'add';
+    const isAddMode = type === 'add';
+    const modeChanged = (wasRestock !== isRestock) || (wasAdd !== isAddMode);
+
+    if (modeChanged && type !== undefined) {
       setCylinderTypeId('');
       lastProcessedCylinderTypeId.current = null;
       lastRestockCylinderTypeId.current = '';
       isManuallyEditingQuantity.current = false;
-      // Clear selectedCylinderTypeId from URL params when movement type changes
       router.setParams({ selectedCylinderTypeId: undefined });
     }
-    
+
     previousType.current = type;
   }, [type, router]);
 
@@ -206,6 +232,7 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
 
   const needsCustomer = type === 'swap' || type === 'loan' || type === 'return';
   const isSale = type === 'swap' || type === 'loan';
+  const isAdd = type === 'add';
   const selectedCylinderType = cylinderTypes.find((c) => c.id === cylinderTypeId);
 
   // Clear cylinder type when customer changes (if customer is required)
@@ -280,6 +307,16 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
     }
   }, [isSale]);
 
+  // Clear add-specific state when switching away from add
+  useEffect(() => {
+    if (!isAdd) {
+      setAddCost('');
+      setAddSellPrice('');
+      setAddRefillCost('');
+      setAddKind('full');
+    }
+  }, [isAdd]);
+
   // Prefill refill total when restock cylinder type or quantity changes
   useEffect(() => {
     if (type !== 'restock' || !cylinderTypeId) {
@@ -332,6 +369,13 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
         return;
       }
     }
+    if (isAdd) {
+      const cost = parseFloat(addCost);
+      if (!Number.isFinite(cost) || cost <= 0) {
+        Alert.alert('Error', 'Please enter a valid initial cost (greater than 0)');
+        return;
+      }
+    }
 
     const performRecord = async () => {
       setIsSubmitting(true);
@@ -340,8 +384,9 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
           type,
           cylinderTypeId,
           quantity: qty,
-          customerId: type === 'restock' ? undefined : customer?.id,
+          customerId: type === 'restock' || isAdd ? undefined : customer?.id,
           notes: notes.trim() || undefined,
+          addKind: isAdd ? addKind : undefined,
         });
 
         if (type === 'restock') {
@@ -403,6 +448,37 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
           }
 
           finishRestock();
+          return;
+        }
+
+        if (isAdd) {
+          const cost = parseFloat(addCost);
+          await createTransaction({
+            type: 'add',
+            amount: cost,
+            movementId,
+            notes: notes.trim() || undefined,
+          });
+          await refetchPrices();
+          queryClient.invalidateQueries({ queryKey: queryKeys.inventory.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.inventory.byType(cylinderTypeId) });
+          const sellVal = parseFloat(addSellPrice);
+          const refillVal = parseFloat(addRefillCost);
+          const hasSell = Number.isFinite(sellVal) && sellVal >= 0;
+          const hasRefill = Number.isFinite(refillVal) && refillVal >= 0;
+          if (hasSell || hasRefill) {
+            const current = getCurrentPriceForType(cylinderTypeId);
+            const sellUnitPrice = hasSell ? sellVal : (current?.sellUnitPrice ?? 0);
+            const refillUnitCost = hasRefill ? refillVal : (current?.refillUnitCost ?? 0);
+            await createPriceRecord({
+              cylinderTypeId,
+              sellUnitPrice,
+              refillUnitCost,
+              notes: notes.trim() || undefined,
+            });
+            await refetchPrices();
+          }
+          finishAdd();
           return;
         }
 
@@ -473,6 +549,21 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
     setIsSubmitting(false);
   };
 
+  const finishAdd = () => {
+    setAddCost('');
+    setAddSellPrice('');
+    setAddRefillCost('');
+    setAddKind('full');
+    setType(undefined);
+    setCustomer(null);
+    setCylinderTypeId('');
+    setQuantity('1');
+    setNotes('');
+    router.setParams({ movementType: undefined, quantity: undefined });
+    Alert.alert('Success', 'Add recorded. Cost included in profit.');
+    setIsSubmitting(false);
+  };
+
   const amtValid = isSale ? (() => {
     const a = parseFloat(amount);
     return Number.isFinite(a) && a >= 0;
@@ -480,6 +571,10 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
   const refillTotalValid = (() => {
     const t = parseFloat(refillTotal);
     return Number.isFinite(t) && t >= 0;
+  })();
+  const addCostValid = (() => {
+    const c = parseFloat(addCost);
+    return Number.isFinite(c) && c > 0;
   })();
 
   const submitDisabled =
@@ -489,6 +584,7 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
     !quantity ||
     (isSale && !amtValid) ||
     (type === 'restock' && !refillTotalValid) ||
+    (isAdd && !addCostValid) ||
     isSubmitting;
 
   return (
@@ -720,6 +816,77 @@ export const MovementForm = forwardRef<MovementFormRef>((props, ref) => {
         </View>
       )}
 
+      {isAdd && (
+        <View style={styles.section}>
+          <Text style={styles.label}>Add as <Text style={styles.required}>*</Text></Text>
+          <View style={styles.addKindRow}>
+            <Pressable
+              style={[
+                styles.addKindOption,
+                addKind === 'full' && styles.addKindOptionSelected,
+              ]}
+              onPress={() => setAddKind('full')}
+            >
+              <Ionicons
+                name="cube"
+                size={20}
+                color={addKind === 'full' ? colors.primary : colors.textTertiary}
+              />
+              <Text style={[styles.addKindLabel, addKind === 'full' && styles.addKindLabelSelected]}>
+                Full
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.addKindOption,
+                addKind === 'empty' && styles.addKindOptionSelected,
+              ]}
+              onPress={() => setAddKind('empty')}
+            >
+              <Ionicons
+                name="cube-outline"
+                size={20}
+                color={addKind === 'empty' ? colors.primary : colors.textTertiary}
+              />
+              <Text style={[styles.addKindLabel, addKind === 'empty' && styles.addKindLabelSelected]}>
+                Empty
+              </Text>
+            </Pressable>
+          </View>
+          <Text style={styles.refillHint}>
+            {selectedCylinderType?.label ?? 'Cylinder type'} × {quantity} — purchase cost for profit
+          </Text>
+          <Input
+            label="Total cost *"
+            placeholder="0"
+            value={addCost}
+            onChangeText={setAddCost}
+            keyboardType="decimal-pad"
+            editable={!!cylinderTypeId}
+            error={addCost && !addCostValid ? 'Enter a valid amount (greater than 0)' : undefined}
+          />
+          <Text style={[styles.refillHint, { marginTop: spacing.md }]}>
+            Optional: set initial sell / refill prices for this type
+          </Text>
+          <Input
+            label="Initial sell price (optional)"
+            placeholder="0"
+            value={addSellPrice}
+            onChangeText={setAddSellPrice}
+            keyboardType="decimal-pad"
+            editable={!!cylinderTypeId}
+          />
+          <Input
+            label="Initial refill cost (optional)"
+            placeholder="0"
+            value={addRefillCost}
+            onChangeText={setAddRefillCost}
+            keyboardType="decimal-pad"
+            editable={!!cylinderTypeId}
+          />
+        </View>
+      )}
+
       {isSale && (
         <View style={styles.section}>
           <Text style={styles.label}>Payment</Text>
@@ -941,6 +1108,36 @@ const styles = StyleSheet.create({
   warningHint: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  addKindRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  addKindOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  addKindOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '12',
+  },
+  addKindLabel: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  addKindLabelSelected: {
+    ...typography.bodySemibold,
+    color: colors.primary,
   },
   refillHint: {
     ...typography.small,

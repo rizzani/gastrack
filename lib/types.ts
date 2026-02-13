@@ -8,7 +8,9 @@ import type { Models } from 'appwrite';
 // Movement Types
 // ============================================================================
 
-export type MovementType = 'swap' | 'loan' | 'return' | 'restock';
+export type MovementType = 'swap' | 'loan' | 'return' | 'restock' | 'add';
+
+export type AddKind = 'full' | 'empty';
 
 // ============================================================================
 // Inventory
@@ -79,6 +81,8 @@ export type Movement = {
   customerId?: string;
   notes?: string;
   createdAt: string;
+  /** When type is 'add': 'full' | 'empty'. */
+  addKind?: AddKind;
 };
 
 type AppwriteMovement = Models.Document & {
@@ -89,6 +93,7 @@ type AppwriteMovement = Models.Document & {
   customerId?: string;
   notes?: string;
   createdAt: string;
+  addKind?: AddKind;
 };
 
 export function fromAppwriteMovement(doc: AppwriteMovement): Movement {
@@ -100,6 +105,7 @@ export function fromAppwriteMovement(doc: AppwriteMovement): Movement {
     customerId: doc.customerId,
     notes: doc.notes,
     createdAt: doc.createdAt ?? doc.$createdAt,
+    addKind: doc.addKind as AddKind | undefined,
   };
 }
 
@@ -201,7 +207,8 @@ export type FinanceTransactionType =
   | 'sale_credit'
   | 'payment'
   | 'refill'
-  | 'expense';
+  | 'expense'
+  | 'add';
 
 export type FinanceTransaction = {
   id: string;

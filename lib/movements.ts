@@ -2,10 +2,11 @@
  * Movement logic: pure applyMovement() and atomic executeMovement().
  *
  * Rules:
- * - swap:   Full −qty, Empty +qty
- * - loan:   Full −qty, Owed +qty
- * - return: Empty +qty, Owed −qty
- * - restock: Full +qty, Empty −qty
+ * - swap:     Full −qty, Empty +qty
+ * - loan:     Full −qty, Owed +qty
+ * - return:   Empty +qty, Owed −qty
+ * - restock:  Full +qty, Empty −qty
+ * - add: Full +qty or Empty +qty (addKind 'full' | 'empty')
  *
  * Atomic strategy (ISSUE 014):
  * 1. Validate with applyMovement (no writes on validation failure).
@@ -18,7 +19,7 @@
 
 import { ID } from 'appwrite';
 import { db, IDs } from './appwrite';
-import type { MovementType } from './types';
+import type { MovementType, AddKind } from './types';
 
 // --- ApplyMovement: pure logic
 
@@ -31,6 +32,8 @@ export type ApplyMovementInput = {
   owed: number;
   /** For restock with insufficient empty: if present and contains "adjustment", allow override (empty → 0). */
   restockAdjustmentNote?: string;
+  /** When type is 'add': 'full' | 'empty'. */
+  addKind?: AddKind;
 };
 
 export type ApplyMovementResult = {
@@ -59,7 +62,7 @@ export class MovementError extends Error {
  * Validates that outcomes are non‑negative; throws MovementError on invalid.
  */
 export function applyMovement(input: ApplyMovementInput): ApplyMovementResult {
-  const { type, quantity, full, empty, owed, restockAdjustmentNote } = input;
+  const { type, quantity, full, empty, owed, restockAdjustmentNote, addKind } = input;
 
   if (quantity <= 0 || !Number.isInteger(quantity)) {
     throw new MovementError(
@@ -109,6 +112,12 @@ export function applyMovement(input: ApplyMovementInput): ApplyMovementResult {
       }
       return { full: full + quantity, empty: empty - quantity, owedDelta: 0 };
     }
+    case 'add': {
+      if (addKind === 'empty') {
+        return { full, empty: empty + quantity, owedDelta: 0 };
+      }
+      return { full: full + quantity, empty, owedDelta: 0 };
+    }
     default: {
       const _: never = type;
       throw new Error(`Unknown movement type: ${(_ as string) ?? type}`);
@@ -126,6 +135,8 @@ export type ExecuteMovementParams = {
   /** Required for loan and return. */
   customerId?: string;
   notes?: string;
+  /** When type is 'add': 'full' | 'empty'. */
+  addKind?: AddKind;
   /** Current inventory for this cylinderType. */
   inventory: { id: string; full: number; empty: number; damaged?: number };
   /** Current owed for (customerId, cylinderTypeId). Null if none. Required for return. */
@@ -148,10 +159,16 @@ function rollbackLog(step: string, err: unknown): void {
  * attempted rollback and logging.
  */
 export async function executeMovement(params: ExecuteMovementParams): Promise<ExecuteMovementResult> {
-  const { userId, type, cylinderTypeId, quantity, customerId, notes, inventory, owed } = params;
+  const { userId, type, cylinderTypeId, quantity, customerId, notes, addKind, inventory, owed } = params;
 
   if ((type === 'loan' || type === 'return') && !customerId) {
     throw new MovementError('customerId is required for loan and return', 'INVALID_QUANTITY');
+  }
+  if (type === 'add') {
+    if (customerId) throw new MovementError('Add movements do not use a customer', 'INVALID_QUANTITY');
+    if (!addKind || (addKind !== 'full' && addKind !== 'empty')) {
+      throw new MovementError('Add requires addKind "full" or "empty"', 'INVALID_QUANTITY');
+    }
   }
 
   const owedQty = owed?.quantity ?? 0;
@@ -162,6 +179,7 @@ export async function executeMovement(params: ExecuteMovementParams): Promise<Ex
     empty: inventory.empty,
     owed: owedQty,
     restockAdjustmentNote: type === 'restock' ? notes : undefined,
+    addKind: type === 'add' ? addKind : undefined,
   });
 
   const movementData: Record<string, string | number> = {
@@ -173,6 +191,7 @@ export async function executeMovement(params: ExecuteMovementParams): Promise<Ex
   };
   if (customerId != null) movementData.customerId = customerId;
   if (notes != null) movementData.notes = notes;
+  if (type === 'add' && addKind != null) movementData.addKind = addKind;
 
   const movementId = ID.unique();
   await db.createDocument(IDs.database, IDs.movements, movementId, movementData);

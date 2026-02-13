@@ -255,6 +255,8 @@ async function setupMovements() {
   await new Promise(resolve => setTimeout(resolve, 500));
   await createAttribute(COLLECTION_IDS.movements, 'notes', 'String', { required: false, size: 65535 });
   await new Promise(resolve => setTimeout(resolve, 500));
+  await createAttribute(COLLECTION_IDS.movements, 'addKind', 'String', { required: false, size: 10 });
+  await new Promise(resolve => setTimeout(resolve, 500));
   await createAttribute(COLLECTION_IDS.movements, 'createdAt', 'String', { required: true, size: 50 });
   await waitForAttributes(COLLECTION_IDS.movements);
   await createIndex(COLLECTION_IDS.movements, 'userId_createdAt', 'key', ['userId', 'createdAt']);
@@ -302,7 +304,7 @@ async function setupFinanceTransactions() {
   await new Promise(resolve => setTimeout(resolve, 500));
   await createAttribute(COLLECTION_IDS.finance_transactions, 'type', 'Enum', {
     required: true,
-    elements: ['sale_cash', 'sale_credit', 'payment', 'refill', 'expense'],
+    elements: ['sale_cash', 'sale_credit', 'payment', 'refill', 'expense', 'add'],
   });
   await new Promise(resolve => setTimeout(resolve, 500));
   await createAttribute(COLLECTION_IDS.finance_transactions, 'amount', 'Float', { required: true });

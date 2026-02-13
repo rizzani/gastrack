@@ -21,6 +21,7 @@ const TRANSACTION_TYPE_LABELS: Record<FinanceTransactionType, string> = {
   payment: 'Payment',
   refill: 'Refill',
   expense: 'Expense',
+  add: 'Add',
 };
 
 export default function HistoryScreen() {
@@ -58,6 +59,8 @@ export default function HistoryScreen() {
         return 'arrow-back-circle';
       case 'restock':
         return 'add-circle';
+      case 'add':
+        return 'cube-outline';
       default:
         return 'ellipse';
     }
@@ -73,10 +76,15 @@ export default function HistoryScreen() {
         return colors.primary;
       case 'restock':
         return colors.accent;
+      case 'add':
+        return colors.primaryDark;
       default:
         return colors.textSecondary;
     }
   };
+
+  const getMovementTypeLabel = (m: { type: string; addKind?: string }) =>
+    m.type === 'add' && m.addKind ? `Add (${m.addKind})` : MOVEMENT_TYPE_LABELS[m.type as keyof typeof MOVEMENT_TYPE_LABELS];
 
   const getTransactionIcon = (type: FinanceTransactionType) => {
     switch (type) {
@@ -89,6 +97,8 @@ export default function HistoryScreen() {
         return 'flask-outline';
       case 'expense':
         return 'remove-circle-outline';
+      case 'add':
+        return 'cube-outline';
       default:
         return 'ellipse';
     }
@@ -103,6 +113,7 @@ export default function HistoryScreen() {
         return colors.primary;
       case 'refill':
       case 'expense':
+      case 'add':
         return colors.error;
       default:
         return colors.textSecondary;
@@ -182,7 +193,7 @@ export default function HistoryScreen() {
                 <View style={styles.movementContent}>
                   <View style={styles.movementTitleRow}>
                     <Text style={styles.movementType}>
-                      {TRANSACTION_TYPE_LABELS[transaction.type]} • {MOVEMENT_TYPE_LABELS[movement.type]}
+                      {TRANSACTION_TYPE_LABELS[transaction.type]} • {getMovementTypeLabel(movement)}
                     </Text>
                     <Text style={styles.movementDate}>{formatDate(transaction.createdAt)}</Text>
                   </View>
@@ -232,7 +243,7 @@ export default function HistoryScreen() {
                 </View>
                 <View style={styles.movementContent}>
                   <View style={styles.movementTitleRow}>
-                    <Text style={styles.movementType}>{MOVEMENT_TYPE_LABELS[movement.type]}</Text>
+                    <Text style={styles.movementType}>{getMovementTypeLabel(movement)}</Text>
                     <Text style={styles.movementDate}>{formatDate(movement.createdAt)}</Text>
                   </View>
                   <View style={styles.movementDetails}>
